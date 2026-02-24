@@ -981,7 +981,7 @@
 
     const request = {
       origin: ORIGIN_ADDR,
-      destination: deliveries[0].direccion,
+      destination: ORIGIN_ADDR,
       waypoints,
       optimizeWaypoints: true,
       travelMode: google.maps.TravelMode.DRIVING,
@@ -1010,13 +1010,13 @@
       document.getElementById('totalDist').textContent = (totalDist / 1000).toFixed(1) + ' km';
       document.getElementById('totalTime').textContent = formatTime(totalSecs);
 
-      // Build ordered list: origin → optimized waypoints → last destination
+      // Build ordered list: origin → optimized waypoints → return to origin
       const orderedDeliveries = [];
       if (deliveries.length === 1) {
         orderedDeliveries.push(deliveries[0]);
       } else {
         order.forEach(i => orderedDeliveries.push(deliveries[i + 1]));
-        orderedDeliveries.push(deliveries[0]); // destination = first delivery
+        orderedDeliveries.push(deliveries[0]);
       }
 
       const paradasList = document.getElementById('paradasList');
@@ -1035,12 +1035,24 @@
         `;
       });
 
+      // Última parada: vuelta al local
+      const lastLeg = legs[legs.length - 1];
+      paradasList.innerHTML += `
+        <div class="parada-item">
+          <div class="parada-num" style="background:var(--accent2)">🏠</div>
+          <div class="parada-info">
+            <div class="parada-name">Vuelta al local</div>
+            <div class="parada-addr">${esc(ORIGIN_ADDR)}</div>
+            ${lastLeg ? `<div class="parada-dist">${lastLeg.distance.text} · ${lastLeg.duration.text}</div>` : ''}
+          </div>
+        </div>
+      `;
+
       document.getElementById('resultadoPanel').classList.add('visible');
 
-      // Build navigation URL
-      const waypointStr = orderedDeliveries.slice(0, -1).map(d => encodeURIComponent(d.direccion)).join('/');
-      const lastDest = encodeURIComponent(orderedDeliveries[orderedDeliveries.length - 1].direccion);
-      navUrl = `https://www.google.com/maps/dir/${encodeURIComponent(ORIGIN_ADDR)}/${waypointStr}/${lastDest}`;
+      // Build navigation URL (all deliveries as waypoints, returns to origin)
+      const waypointStr = orderedDeliveries.map(d => encodeURIComponent(d.direccion)).join('/');
+      navUrl = `https://www.google.com/maps/dir/${encodeURIComponent(ORIGIN_ADDR)}/${waypointStr}/${encodeURIComponent(ORIGIN_ADDR)}`;
       document.getElementById('navBtn').style.display = '';
 
       // Mark optimized visually
